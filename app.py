@@ -3,7 +3,11 @@ import pandas as pd
 import boto3
 import json
 import os
-os.environ["TEAM_API_KEY"] = "YOUR_API_KEY"
+from dotenv import load_dotenv
+
+load_dotenv()
+os.environ["TEAM_API_KEY"] = os.getenv("TEAM_API_KEY")
+
 from aixplain.factories import ModelFactory
 
 # Set Streamlit page config to wide layout
