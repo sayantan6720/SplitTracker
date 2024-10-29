@@ -5,6 +5,8 @@ import json
 import os
 
 os.environ["TEAM_API_KEY"] = st.secrets["TEAM_API_KEY"]
+AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
+AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
 
 from aixplain.factories import ModelFactory
 
@@ -28,7 +30,12 @@ st.markdown("""
 
 # Function to extract text from image using Textract and external model
 def extract_text_from_image(image_file):
-    textract_client = boto3.client('textract', region_name='us-east-1')
+    textract_client = boto3.client(
+    'textract',
+    region_name='us-east-1',
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+)
     image_bytes = image_file.read()
 
     response = textract_client.detect_document_text(Document={'Bytes': image_bytes})
