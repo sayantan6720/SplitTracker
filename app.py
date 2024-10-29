@@ -4,6 +4,7 @@ import boto3
 import json
 import os
 
+# Set environment variables using st.secrets
 os.environ["TEAM_API_KEY"] = st.secrets["TEAM_API_KEY"]
 AWS_ACCESS_KEY_ID = st.secrets["AWS_ACCESS_KEY_ID"]
 AWS_SECRET_ACCESS_KEY = st.secrets["AWS_SECRET_ACCESS_KEY"]
@@ -31,11 +32,11 @@ st.markdown("""
 # Function to extract text from image using Textract and external model
 def extract_text_from_image(image_file):
     textract_client = boto3.client(
-    'textract',
-    region_name='us-east-1',
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-)
+        'textract',
+        region_name='us-east-1',
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+    )
     image_bytes = image_file.read()
 
     response = textract_client.detect_document_text(Document={'Bytes': image_bytes})
@@ -63,7 +64,17 @@ def extract_text_from_image(image_file):
     })
 
     bill_dict = json.loads(model_output['data'])
-    return bill_dict
+    
+    # Create a list where each item is duplicated by count
+    expanded_items = []
+    for item, values in bill_dict.items():
+        item_count, item_price = values['item_count'], values['price_per']
+        expanded_items.extend([(item, item_price) for _ in range(int(item_count))])
+
+    # Convert expanded list into a DataFrame
+    expanded_df = pd.DataFrame(expanded_items, columns=['Item', 'Price'])
+    
+    return expanded_df
 
 # Title
 st.title("Bill Splitter")
@@ -96,10 +107,7 @@ names_list = [name.strip() for name in names_input.split(",")]
 if st.button("Submit"):
     if st.session_state['uploaded_image'] is not None:
         # Extract text from the image (stored in session state)
-        bill_data = extract_text_from_image(st.session_state['uploaded_image'])
-
-        # Convert bill data into a dataframe
-        df = pd.DataFrame.from_dict(bill_data, orient='index', columns=['item_count', 'price_per'])
+        df = extract_text_from_image(st.session_state['uploaded_image'])
 
         # Store the DataFrame in session state to avoid reinitialization
         st.session_state['df'] = df
@@ -109,7 +117,7 @@ if 'df' in st.session_state:
     df = st.session_state['df']
 
     # Calculate total bill price
-    total_bill_price = (df['item_count'] * df['price_per']).sum()
+    total_bill_price = df['Price'].sum()
 
     # Display the total bill price
     st.write(f"**Total Bill Price: ${total_bill_price:.2f}**")
@@ -117,33 +125,19 @@ if 'df' in st.session_state:
     # Step 3: Display the table with checkboxes for each person
     st.write("Please check the items each person is responsible for:")
     for index, row in df.iterrows():
-        cols = st.columns(len(names_list) + 4)  # Extra column for "Select All" button
-        cols[0].write(index)  # Item name
-        cols[1].write(row['item_count'])  # Item count
-        cols[2].write(f"${row['price_per']:.2f}")  # Item price
-
-        # Select All checkbox
-        select_all_key = f"select_all_{index}"
-        select_all = cols[3].checkbox("Select All", key=select_all_key, value=st.session_state.select_all_state.get(select_all_key, False))
-
-        if select_all:
-            st.session_state.select_all_state[select_all_key] = True
-        else:
-            st.session_state.select_all_state[select_all_key] = False
+        cols = st.columns(len(names_list) + 3)  # Extra column for "Select All" button
+        cols[0].write(row['Item'])  # Item name
+        cols[1].write(f"${row['Price']:.2f}")  # Item price
 
         # Loop through each name and render the checkbox
         for i, name in enumerate(names_list):
             checkbox_key = f"{name}_{index}"
 
-            # If "Select All" is checked, set all checkboxes to True for this row
-            if select_all:
-                st.session_state.checkbox_state[checkbox_key] = True
-
             # Retrieve checkbox state from session state (or default to False)
             checkbox_state = st.session_state.checkbox_state.get(checkbox_key, False)
 
             # Show the checkbox and store state in session state
-            df.at[index, name] = cols[i + 4].checkbox(name, value=checkbox_state, key=checkbox_key)
+            df.at[index, name] = cols[i + 2].checkbox(name, value=checkbox_state, key=checkbox_key)
 
             # Update checkbox state in session state after click
             st.session_state.checkbox_state[checkbox_key] = df.at[index, name]
@@ -154,11 +148,11 @@ if 'df' in st.session_state:
 
         for index, row in df.iterrows():
             # Count how many people selected this item
-            people_who_selected = [name for name in names_list if row[name]]
+            people_who_selected = [name for name in names_list if row.get(name, False)]
             num_people = len(people_who_selected)
 
             if num_people > 0:  # Only split if at least one person selected the item
-                price_per_person = (row['price_per'] * row['item_count']) / num_people
+                price_per_person = row['Price'] / num_people
 
                 # Add the split amount to each person who selected the item
                 for name in people_who_selected:
