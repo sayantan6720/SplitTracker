@@ -3,10 +3,8 @@ import pandas as pd
 import boto3
 import json
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
-os.environ["TEAM_API_KEY"] = os.getenv("TEAM_API_KEY")
+os.environ["TEAM_API_KEY"] = st.secrets["TEAM_API_KEY"]
 
 from aixplain.factories import ModelFactory
 
@@ -30,7 +28,7 @@ st.markdown("""
 
 # Function to extract text from image using Textract and external model
 def extract_text_from_image(image_file):
-    textract_client = boto3.client('textract')
+    textract_client = boto3.client('textract', region_name='us-east-1')
     image_bytes = image_file.read()
 
     response = textract_client.detect_document_text(Document={'Bytes': image_bytes})
