@@ -50,7 +50,8 @@ def extract_text_from_image(image_file):
 
         Only return a dictionary (with no other extra texts outside of the dictionary) where the keys are the item names and the values are the counts and prices (Note this is price per item. If an item appears multiple times, dont sum up the prices). 
         Note that the count of each item should determined by how many times that item's name appears in the list. Dont use any other number to determine count. The counts and prices should be a list.
-        Include tax as well. Count for the tax should be 1. Also, include the bag charges, if any, in the same format as Tax (1 count). Dont include "convenience item" as an item key.
+        Include tax as well. Count for the tax should be 1. Also, include the bag charges, if any, in the same format as Tax (1 count). Dont include "convenience item" as an item key. Dont include "SGST" or "CGST" as item keys.
+        MAKE SURE THE PRICE AND COUNTS FOR EACH ITEM ARE INTEGTER/FLOAT, NOT STRING.
         """,
         "max_tokens": 6000,
         "temperature": 0.1
